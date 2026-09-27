@@ -2,7 +2,7 @@ from datetime import datetime
 from html import escape
 from typing import Annotated
 
-from pydantic import BaseModel, Field, SecretStr, StringConstraints, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, StringConstraints, field_serializer
 
 
 PostDescription = Annotated[str, StringConstraints(min_length=1, max_length=500)]
@@ -16,6 +16,7 @@ Username = Annotated[
 
 
 class PostRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: PostName
     description: PostDescription
 
@@ -32,6 +33,7 @@ class PostResponse(BaseModel):
 
 
 class LoginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     username: Username
     password: SecretStr = Field(min_length=12, max_length=128)
 
