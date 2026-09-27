@@ -1,16 +1,16 @@
 from contextlib import asynccontextmanager
-from time import timezone
+from datetime import timezone
 
 from fastapi import FastAPI
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from app.db import Base, DbSession, engine
-from app.dependencies import CurrentUser, unauthorized
-from app import models
-from app.models import Post, User
-from app.schemas import LoginRequest, PostRequest, PostResponse, TokenResponse
-from app.security import hash_password, verify_password, create_access_token
+from db import Base, DbSession, engine
+from dependencies import CurrentUser, unauthorized
+import models
+from models import Post, User
+from schemas import LoginRequest, PostRequest, PostResponse, TokenResponse
+from security import hash_password, verify_password, create_access_token
 
 
 @asynccontextmanager
@@ -25,16 +25,16 @@ app = FastAPI(lifespan=lifespan)
 
 def post_to_response(post: Post) -> PostResponse:
     return PostResponse(
-        post.name,
-        post.description,
-        post.created_at.replace(tzinfo=timezone.utc),
-        post.author.username,
+        name=post.name,
+        description=post.description,
+        created_at=post.created_at.replace(tzinfo=timezone.utc),
+        author=post.author.username,
     )
 
 
 @app.get("/api/data", response_model=list[PostResponse])
 async def get_data(user: CurrentUser, db: DbSession) -> list[PostResponse]:
-    posts = db.scalar(select(Post).options(joinedload(Post.author))).all()
+    posts = db.scalars(select(Post).options(joinedload(Post.author))).all()
     return [post_to_response(post) for post in posts]
 
 
@@ -42,7 +42,7 @@ async def get_data(user: CurrentUser, db: DbSession) -> list[PostResponse]:
 async def post_data(
     body: PostRequest, user: CurrentUser, db: DbSession
 ) -> PostResponse:
-    post = Post(body.name, body.description, user.username)
+    post = Post(name=body.name, description=body.description, author=user)
     db.add(post)
     db.commit()
     db.refresh(post)
@@ -50,11 +50,14 @@ async def post_data(
     return post_to_response(post)
 
 
-@app.post("/api/auth", response_model=TokenResponse)
+@app.post("/api/auth/login", response_model=TokenResponse)
 async def login(body: LoginRequest, db: DbSession) -> TokenResponse:
     user = db.scalar(select(User).where(User.username == body.username))
     if user is None:
-        user = User(body.username, hash_password(body.password))
+        user = User(
+            username=body.username,
+            password_hash=hash_password(body.password.get_secret_value()),
+        )
         db.add(user)
         db.commit()
         db.refresh(user)
@@ -62,4 +65,4 @@ async def login(body: LoginRequest, db: DbSession) -> TokenResponse:
     elif not verify_password(body.password.get_secret_value(), user.password_hash):
         raise unauthorized()
 
-    return TokenResponse(create_access_token(user.id))
+    return TokenResponse(access_token=create_access_token(user.id))

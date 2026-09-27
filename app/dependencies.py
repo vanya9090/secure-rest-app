@@ -4,9 +4,9 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt.exceptions import InvalidTokenError
 
-from app.db import DbSession
-from app.models import User
-from app.security import decode_access_token
+from db import DbSession
+from models import User
+from security import decode_access_token
 
 
 bearer = HTTPBearer(auto_error=False)

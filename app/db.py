@@ -4,7 +4,7 @@ from fastapi import Depends
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-from app.config import get_settings
+from config import get_settings
 
 
 class Base(DeclarativeBase):

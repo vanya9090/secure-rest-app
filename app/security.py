@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 import jwt
 from pwdlib import PasswordHash
 
-from app.config import get_settings
+from config import get_settings
 
 
 ALGORITHM = "HS256"
