@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests-and-sast:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v9
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: uv sync --locked --dev
+
+      - name: Run Bandit
+        run: |
+          mkdir -p reports
+          uv run --locked bandit -r app -f json -o reports/bandit.json
+
+      - name: Upload Bandit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: reports/bandit.json
+          if-no-files-found: ignore
+
+  sca:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v9
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: uv sync --locked --dev
+
+      - name: Export dependencies for Snyk
+        run: |
+          uv export --locked --no-dev --no-emit-project --no-hashes \
+            --output-file requirements-snyk.txt
+
+      - name: Install Snyk
+        uses: snyk/actions/setup@master
+
+      - name: Scan dependencies
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          mkdir -p reports
+          snyk test \
+            --file=requirements-snyk.txt \
+            --package-manager=pip \
+            --command=.venv/bin/python \
+            --json-file-output=reports/snyk.json
+
+      - name: Upload Snyk report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-report
+          path: reports/snyk.json
+          if-no-files-found: ignore
