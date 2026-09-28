@@ -50,7 +50,7 @@ async def post_data(
     return post_to_response(post)
 
 
-@app.post("/api/auth/login", response_model=TokenResponse)
+@app.post("/auth/login", response_model=TokenResponse)
 async def login(body: LoginRequest, db: DbSession) -> TokenResponse:
     user = db.scalar(select(User).where(User.username == body.username))
     if user is None:
